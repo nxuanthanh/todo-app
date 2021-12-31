@@ -1,14 +1,26 @@
-import { getTodoTemplate, getTodoListElement } from './selectors.js';
-import { getTodoList, setTodoItem } from './utils.js';
+import {
+  getTodoListElement,
+  getTodoInputElement,
+  getTodoFormElement,
+  getTodoCheckboxElement,
+} from './selectors.js';
+import { getTodoList, setTodoItem, cloneLiElement } from './utils.js';
+
+function populateTodoFrom(todo) {
+  const input = getTodoInputElement();
+  const checkbox = getTodoCheckboxElement();
+  const todoForm = getTodoFormElement();
+
+  input.value = todo.title;
+  checkbox.checked = todo.status === 'completed' ? 1 : 0;
+  todoForm.dataset.id = todo.id;
+}
 
 function createTodoElement(todo) {
   if (!todo) return null;
 
-  const todoTemplate = getTodoTemplate();
-  if (!todoTemplate) return null;
-
   // clone li element
-  const todoElement = todoTemplate.content.querySelector('li').cloneNode(true);
+  const todoElement = cloneLiElement();
 
   todoElement.dataset.id = todo.id;
   todoElement.dataset.status = todo.status;
@@ -24,7 +36,11 @@ function createTodoElement(todo) {
 
   // handle click on mark-as-done button
   const markAsDonButton = todoElement.querySelector('.btn.mark-as-done');
+
   if (markAsDonButton) {
+    const markContent = todo.status === 'completed' ? 'Reset' : 'Finish';
+    markAsDonButton.textContent = markContent;
+
     markAsDonButton.addEventListener('click', () => {
       const currentState = todoElement.dataset.status;
       const newState = currentState === 'completed' ? 'pending' : 'completed';
@@ -59,6 +75,16 @@ function createTodoElement(todo) {
     });
   }
 
+  // handle click on edit button
+  const editButton = todoElement.querySelector('.btn.edit');
+  if (editButton) {
+    editButton.addEventListener('click', () => {
+      const todoList = getTodoList();
+      const lastTodo = todoList.find((e) => e.id === todo.id);
+      populateTodoFrom(lastTodo);
+    });
+  }
+
   return todoElement;
 }
 
@@ -74,6 +100,66 @@ function renderTodoList(todoList) {
   }
 }
 
+function handleTodoFormSubmit(e) {
+  e.preventDefault();
+  const inputValue = getTodoInputElement().value;
+  const checkbox = getTodoCheckboxElement();
+  const todoForm = getTodoFormElement();
+
+  if (!todoForm) return;
+  const todoFormId = todoForm.dataset.id;
+  const isEdit = Boolean(todoFormId);
+
+  if (isEdit) {
+    const todoList = getTodoList();
+    const index = todoList.findIndex((e) => e.id === Number(todoFormId));
+    if (index < 0) return;
+
+    todoList[index].title = inputValue;
+    todoList[index].status = checkbox.checked ? 'completed' : 'pending';
+    setTodoItem(todoList);
+
+    const currentTodo = document.querySelector(`#todoList > li[data-id="${todoFormId}"]`);
+    if (currentTodo) {
+      const titleElement = currentTodo.querySelector('.todo__title');
+      if (titleElement) titleElement.textContent = inputValue;
+      currentTodo.dataset.status = todoList[index].status;
+
+      const divElement = currentTodo.querySelector('div.todo');
+      if (divElement) {
+        const alertClass =
+          currentTodo.dataset.status === 'completed' ? 'alert-success' : 'alert-secondary';
+        divElement.classList.remove('alert-secondary', 'alert-success');
+        divElement.classList.add(alertClass);
+
+        const markButton = divElement.querySelector('.btn.mark-as-done');
+        const markContent = currentTodo.dataset.status === 'completed' ? 'Reset' : 'Finish';
+        markButton.textContent = markContent;
+      }
+    }
+  } else {
+    const todo = {
+      id: new Date().getTime(),
+      title: inputValue,
+      status: checkbox.checked ? 'completed' : 'pending',
+    };
+
+    const todoList = getTodoList();
+    todoList.push(todo);
+    setTodoItem(todoList);
+
+    const ulElement = getTodoListElement();
+    if (ulElement) {
+      const liElement = createTodoElement(todo);
+      ulElement.appendChild(liElement);
+    }
+  }
+
+  // reset  todo form
+  delete todoForm.dataset.id;
+  todoForm.reset();
+}
+
 (() => {
   // const todoList = [
   //   { id: 1, title: 'HTML & CSS', status: 'completed' },
@@ -84,4 +170,10 @@ function renderTodoList(todoList) {
   const todoList = getTodoList();
 
   renderTodoList(todoList);
+  const todoForm = getTodoFormElement();
+  if (todoForm) {
+    todoForm.addEventListener('submit', (e) => {
+      handleTodoFormSubmit(e);
+    });
+  }
 })();
