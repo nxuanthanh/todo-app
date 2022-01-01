@@ -18,3 +18,23 @@ export function cloneLiElement() {
   const todoElement = todoTemplate.content.querySelector('li').cloneNode(true);
   return todoElement;
 }
+
+export function isMatchSearch(element, searchTerm) {
+  if (!element) return false;
+
+  if (searchTerm === '') return true;
+  const todoTitle = element.querySelector('p.todo__title');
+
+  return todoTitle.textContent.toLowerCase().includes(searchTerm.toLowerCase());
+}
+
+export function isMatchStatus(element, filterStatus) {
+  return filterStatus === 'all' || element.dataset.status === filterStatus;
+}
+
+export function isMatch(todoElement, params) {
+  return (
+    isMatchSearch(todoElement, params.get('searchTerm')) &&
+    isMatchStatus(todoElement, params.get('status'))
+  );
+}

@@ -4,7 +4,7 @@ import {
   getTodoFormElement,
   getTodoCheckboxElement,
 } from './selectors.js';
-import { getTodoList, setTodoItem, cloneLiElement } from './utils.js';
+import { getTodoList, setTodoItem, cloneLiElement, isMatch } from './utils.js';
 
 function populateTodoFrom(todo) {
   const input = getTodoInputElement();
@@ -16,7 +16,7 @@ function populateTodoFrom(todo) {
   todoForm.dataset.id = todo.id;
 }
 
-function createTodoElement(todo) {
+function createTodoElement(todo, params) {
   if (!todo) return null;
 
   // clone li element
@@ -33,6 +33,8 @@ function createTodoElement(todo) {
   const alertClass = todo.status === 'completed' ? 'alert-success' : 'alert-secondary';
   divElement.classList.remove('alert-secondary');
   divElement.classList.add(alertClass);
+
+  todoElement.hidden = !isMatch(todoElement, params);
 
   // handle click on mark-as-done button
   const markAsDonButton = todoElement.querySelector('.btn.mark-as-done');
@@ -88,14 +90,14 @@ function createTodoElement(todo) {
   return todoElement;
 }
 
-function renderTodoList(todoList) {
+function renderTodoList(todoList, params) {
   if (!Array.isArray(todoList) || todoList.length === 0) return;
 
   const ulElement = getTodoListElement();
   if (!ulElement) return;
 
   for (const todo of todoList) {
-    const todoElement = createTodoElement(todo);
+    const todoElement = createTodoElement(todo, params);
     ulElement.appendChild(todoElement);
   }
 }
@@ -150,7 +152,7 @@ function handleTodoFormSubmit(e) {
 
     const ulElement = getTodoListElement();
     if (ulElement) {
-      const liElement = createTodoElement(todo);
+      const liElement = createTodoElement(todo, params);
       ulElement.appendChild(liElement);
     }
   }
@@ -168,8 +170,9 @@ function handleTodoFormSubmit(e) {
   //   { id: 4, title: 'NextJS', status: 'pending' },
   // ];
   const todoList = getTodoList();
+  const params = new URLSearchParams(window.location.search);
 
-  renderTodoList(todoList);
+  renderTodoList(todoList, params);
   const todoForm = getTodoFormElement();
   if (todoForm) {
     todoForm.addEventListener('submit', (e) => {
